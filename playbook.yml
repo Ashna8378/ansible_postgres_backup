@@ -1,0 +1,44 @@
+---
+- hosts: localhost
+  gather_facts: false
+  vars_files:
+    - db_list.yml
+
+  vars:
+    backup_dir: "{{ lookup('env','HOME') }}/db_dumps"
+    today: "{{ lookup('pipe','date +%F') }}"
+
+  tasks:
+
+    - name: Create backup directory if not exists
+      file:
+        path: "{{ backup_dir }}"
+        state: directory
+
+    - name: Dump each database if it exists
+      shell: |
+        BACKUP_FILE="{{ backup_dir }}/{{ item }}_dump_{{ today }}.sql"
+
+        # Check if DB exists
+        if docker exec pg_backup_test \
+           psql -U testuser -d postgres -At \
+           -c "SELECT 1 FROM pg_database WHERE datname='{{ item }}';" \
+           | grep -q 1; then
+
+            # Run pg_dump
+            docker exec pg_backup_test pg_dump -U testuser {{ item }} > "${BACKUP_FILE}"
+
+            # Check that dump file is not empty
+            if [ ! -s "${BACKUP_FILE}" ]; then
+                echo "ERROR: Backup failed for {{ item }}, dump file is empty!" >&2
+                exit 1
+            else
+                echo "Backup successful for {{ item }}, size: $(stat -c%s "${BACKUP_FILE}") bytes"
+            fi
+        else
+            echo "ERROR: Database {{ item }} does not exist!" >&2
+            exit 1
+        fi
+      loop: "{{ dbs }}"
+      loop_control:
+        label: "{{ item }}"
