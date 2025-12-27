@@ -1,5 +1,3 @@
 dbs:
   - testdb
-  - smalldb
-  - bigdb
-  - db1
+  
