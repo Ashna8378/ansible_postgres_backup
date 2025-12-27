@@ -5,7 +5,8 @@
     - db_list.yml
 
   vars:
-    backup_dir: "{{ lookup('env','HOME') }}/db_dumps"
+    backup_dir: /backups/"
+     # backup_dir: "{{ lookup('env','HOME') }}/db_dumps"
     today: "{{ lookup('pipe','date +%F') }}"
 
   tasks:
